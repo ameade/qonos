@@ -376,19 +376,26 @@ def job_get_all(params={}):
                         'worker_id',
                         'status',
                         'timeout',
-                        'hard_timeout']
+                        'hard_timeout',
+                        'updated_at_max']
 
+    comparator = lambda x,y: x == y
     for key in JOB_BASE_FILTERS:
         if key in params:
             value = params.get(key)
             if type(value) is datetime.datetime:
                 value = timeutils.normalize_time(value).replace(microsecond=0)
 
+            # one off filter, need to do a comparison other than ==
+            if key is 'updated_at_max':
+                key = 'updated_at'
+                comparator = lambda x,y: x <= y
+
             for job in reversed(jobs):
                 job_value = job.get(key)
                 if job_value and type(job_value) is datetime.datetime:
                     job_value = job_value.replace(microsecond=0)
-                if not (job_value == value):
+                if not (comparator(job_value, value)):
                     del jobs[jobs.index(job)]
 
     for job in jobs:

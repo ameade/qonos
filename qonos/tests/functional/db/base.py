@@ -1001,6 +1001,59 @@ class TestJobsDBApi(test_utils.BaseTestCase):
         expected = [job]
         self.assertEqual(expected, jobs)
 
+    def test_job_get_all_with_updated_at_max_filter(self):
+        now = timeutils.utcnow()
+        updated_at_max = now - datetime.timedelta(hours=5)
+        fixture = {
+            'action': 'test_action',
+            'tenant': unit_utils.TENANT3,
+            'schedule_id': unit_utils.SCHEDULE_UUID2,
+            'worker_id': unit_utils.WORKER_UUID3,
+            'status': 'queued',
+            'timeout': now,
+            'hard_timeout': now,
+            'job_metadata': [
+                {
+                    'key': 'instance_id',
+                    'value': 'my_instance',
+                },
+            ],
+        }
+
+        # create a job before setting time override, ensuring filter does
+        # not pick up jobs with updated_at > updated_at_max
+        job0 = self.db_api.job_create(fixture)
+
+        timeutils.set_time_override(updated_at_max)
+        job1 = self.db_api.job_create(fixture)
+
+        fixture = {
+            'action': 'test_action',
+            'tenant': unit_utils.TENANT3,
+            'schedule_id': unit_utils.SCHEDULE_UUID2,
+            'worker_id': unit_utils.WORKER_UUID3,
+            'status': 'queued',
+            'timeout': now,
+            'hard_timeout': now,
+            'job_metadata': [
+                {
+                    'key': 'instance_id',
+                    'value': 'my_instance',
+                },
+            ],
+        }
+
+        timeutils.set_time_override(updated_at_max -
+                                    datetime.timedelta(hours=1))
+        job2 = self.db_api.job_create(fixture)
+        params = {}
+        params['updated_at_max'] = updated_at_max
+        jobs = self.db_api.job_get_all(params=params)
+        self.assertFalse(job0 in jobs)
+        self.assertEqual(len(jobs), 2)
+        self.assertTrue(job1 in jobs)
+        self.assertTrue(job2 in jobs)
+
     def test_job_get_by_id(self):
         expected = self.job_1
         actual = self.db_api.job_get_by_id(self.job_1['id'])

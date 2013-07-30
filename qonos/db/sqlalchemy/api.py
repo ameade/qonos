@@ -589,8 +589,12 @@ def job_create(job_values):
 def _filter_query_on_attributes(query, params, model, allowed_filters):
     for key in allowed_filters:
         if key in params:
-            query = query.filter(
-                getattr(model, key) == params[key])
+            if key is 'updated_at_max':
+                query = query.filter(
+                    getattr(model, 'updated_at') <= params['updated_at_max'])
+            else:
+                query = query.filter(
+                    getattr(model, key) == params[key])
             params.pop(key)
 
     return query
@@ -607,7 +611,8 @@ def job_get_all(params={}):
                         'worker_id',
                         'status',
                         'timeout',
-                        'hard_timeout']
+                        'hard_timeout',
+                        'updated_at_max']
 
     query = _filter_query_on_attributes(query,
                                         params,
