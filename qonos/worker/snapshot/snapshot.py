@@ -128,26 +128,17 @@ class SnapshotProcessor(worker.JobProcessor):
             self._job_cancelled(job_id, msg)
             return
 
-        should_create = True
+        create_new_image = True
         if ('image_id' in job['metadata']):
             image_id = job['metadata']['image_id']
-            if (job['status'] in ['PROCESSING', 'TIMED_OUT']):
-                should_create = False
+            status = self._get_image_status(image_id)
+            if (status['job_status'] in ['PROCESSING', 'DONE']):
                 LOG.info(_("Worker %(worker_id)s Resuming image: %(image_id)s")
                          % {'worker_id': self.worker.worker_id,
                             'image_id': image_id})
-            elif (job['status'] == 'ERROR'):
-                status = self._get_image_status(image_id)
-                if (status['job_status'] in ['PROCESSING', 'DONE']):
-                    LOG.info(_("Worker %(worker_id)s "
-                               "Previous image %(image_id)s failed with status"
-                               " %(image_status)s. Retrying.")
-                         % {'worker_id': self.worker.worker_id,
-                            'image_id': image_id,
-                            'image_status': status['image_status']})
-                    should_create = False
+                create_new_image = False
 
-        if should_create:
+        if create_new_image:
             image_id = self._create_image(job_id, instance_id,
                                           job['schedule_id'])
             if image_id is None:

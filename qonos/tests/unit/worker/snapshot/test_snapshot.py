@@ -208,6 +208,8 @@ class TestSnapshotProcessor(test_utils.BaseTestCase):
         self.job['status'] = 'PROCESSING'
         # Note NO call to create_image is expected
         self.nova_client.images.get(IMAGE_ID).AndReturn(
+            MockImageStatus('SAVING'))
+        self.nova_client.images.get(IMAGE_ID).AndReturn(
             MockImageStatus('ACTIVE'))
 
         mock_retention = MockRetention()
